@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}Факультеты{% endblock %}
+{% block page_pretitle %}Структура университета{% endblock %}
+{% block page_title %}Факультеты и кафедры{% endblock %}
+
+{% block content %}
+<div class="row row-cards">
+  {% for dept in departments %}
+    <div class="col-12 col-md-6">
+      <div class="card h-100">
+        <div class="card-header">
+          <h3 class="card-title text-wrap-balance">{{ dept.name }}</h3>
+        </div>
+        <div class="card-body">
+          <div class="d-flex gap-3 mb-3">
+            <span class="badge bg-blue-lt">
+              <i class="ti ti-books me-1"></i>Курсов: {{ dept.courses_cnt }}
+            </span>
+            <span class="badge bg-green-lt">
+              <i class="ti ti-users me-1"></i>Студентов: {{ dept.students_cnt }}
+            </span>
+          </div>
+
+          <div class="small text-secondary mb-2">Дисциплины подразделения:</div>
+          {% if dept.courses.all %}
+            <div class="list-group list-group-flush">
+              {% for c in dept.courses.all %}
+                <div class="list-group-item px-0 py-2 d-flex justify-content-between align-items-center">
+                  <span>{{ c.title }}</span>
+                  <a href="{% url 'course_list' %}?dept={{ dept.id }}" class="btn btn-sm btn-ghost-primary">Открыть</a>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <p class="text-secondary small mb-0">За этим подразделением курсы пока не закреплены.</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  {% empty %}
+    <div class="col-12">
+      <div class="card">
+        <div class="card-body text-center text-secondary py-5">
+          Факультеты в базе данных отсутствуют.
+        </div>
+      </div>
+    </div>
+  {% endfor %}
+</div>
+{% endblock %}

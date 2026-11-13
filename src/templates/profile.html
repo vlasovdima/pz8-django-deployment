@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+
+{% block title %}Личный кабинет{% endblock %}
+{% block page_pretitle %}Аккаунт студента{% endblock %}
+{% block page_title %}Профиль пользователя{% endblock %}
+
+{% block page_actions %}
+<form method="post" action="{% url 'logout' %}" class="m-0">
+  {% csrf_token %}
+  <button type="submit" class="btn btn-outline-danger">
+    <i class="ti ti-logout icon me-1"></i>Выйти из системы
+  </button>
+</form>
+{% endblock %}
+
+{% block content %}
+<div class="row row-cards">
+  <!-- Левая колонка: карточка профиля и выбор факультета -->
+  <div class="col-12 col-lg-4">
+    <div class="card">
+      <div class="card-body text-center">
+        <span class="avatar avatar-xl mb-3 rounded bg-blue-lt">
+          {{ user.username|slice:":2"|upper }}
+        </span>
+        <h3 class="m-0 mb-1">{{ user.get_full_name|default:user.username }}</h3>
+        <div class="text-secondary mb-3">@{{ user.username }}</div>
+        <div>
+          {% if user.is_staff %}
+            <span class="badge bg-purple-lt">Администратор</span>
+          {% else %}
+            <span class="badge bg-green-lt">Студент</span>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="card-body border-top">
+        <form method="post">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label class="form-label" for="profile-dept">Ваш факультет</label>
+            <select id="profile-dept" name="department_id" class="form-select">
+              <option value="">Не выбран</option>
+              {% for dept in departments %}
+                <option value="{{ dept.id }}" {% if student_profile.department_id == dept.id %}selected{% endif %}>
+                  {{ dept.name }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+          <button type="submit" class="btn btn-primary w-100">
+            <i class="ti ti-device-floppy icon me-1"></i>Сохранить факультет
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Правая колонка: записанные учебные курсы -->
+  <div class="col-12 col-lg-8">
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">Мои выбранные курсы ({{ enrolled_courses.count }})</h3>
+        <div class="card-actions">
+          <a href="{% url 'course_list' %}" class="btn btn-sm btn-primary">
+            <i class="ti ti-plus icon me-1"></i>Добавить курс
+          </a>
+        </div>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-vcenter card-table">
+          <thead>
+            <tr>
+              <th>Дисциплина</th>
+              <th>Факультет</th>
+              <th class="w-1"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for course in enrolled_courses %}
+              <tr>
+                <td class="fw-medium">{{ course.title }}</td>
+                <td class="text-secondary text-wrap-balance">{{ course.department.name }}</td>
+                <td>
+                  <form method="post" action="{% url 'toggle_course' course.id %}" class="m-0">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{% url 'profile' %}">
+                    <button type="submit" class="btn btn-sm btn-outline-danger">Отписаться</button>
+                  </form>
+                </td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="3" class="text-center text-secondary py-4">
+                  Вы пока не записаны ни на один курс. Перейдите в <a href="{% url 'course_list' %}">каталог курсов</a>.
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

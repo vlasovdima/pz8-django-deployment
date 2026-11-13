@@ -1,0 +1,19 @@
+/* Небольшие доработки поверх стандартных стилей Tabler */
+.course-card {
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.course-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0.5rem 1.25rem rgba(18, 38, 63, 0.08);
+}
+
+.navbar-brand-text {
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+/* Чтобы длинные названия факультетов не ломали верстку на узких экранах */
+.text-wrap-balance {
+  word-break: break-word;
+}

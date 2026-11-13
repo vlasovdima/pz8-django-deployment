@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Центр управления заявками{% endblock %}
+{% block page_pretitle %}ПЗ №7 · REST API + Tabler + JavaScript{% endblock %}
+{% block page_title %}Центр управления заявками{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+
+<!-- Область для вывода уведомлений и ошибок валидации -->
+<div id="message" class="d-none mb-3" role="status" aria-live="polite"></div>
+
+<!-- Карточки сводной статистики по заявкам пользователя -->
+<div class="row row-cards mb-4">
+  <div class="col-sm-4">
+    <div class="card">
+      <div class="card-body">
+        <div class="subheader">Всего заявок</div>
+        <div class="h1 mb-0 mt-1" id="stat-total">0</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-4">
+    <div class="card">
+      <div class="card-body">
+        <div class="subheader">В работе</div>
+        <div class="h1 mb-0 mt-1 text-blue" id="stat-progress">0</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-4">
+    <div class="card">
+      <div class="card-body">
+        <div class="subheader">Выполнено</div>
+        <div class="h1 mb-0 mt-1 text-green" id="stat-done">0</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Форма создания новой заявки -->
+<div class="card mb-4">
+  <div class="card-header">
+    <h3 class="card-title">Новая заявка</h3>
+  </div>
+  <div class="card-body">
+    <form id="ticket-form" novalidate>
+      <div class="row g-3">
+        <div class="col-md-7">
+          <label class="form-label required" for="title">Название заявки</label>
+          <input id="title" type="text" class="form-control" placeholder="Например: Настройка VPN для лаборатории" required>
+        </div>
+        <div class="col-md-5">
+          <label class="form-label required" for="category">Категория</label>
+          <select id="category" class="form-select" required></select>
+        </div>
+        <div class="col-12">
+          <label class="form-label" for="description">Описание (необязательно)</label>
+          <textarea id="description" class="form-control" rows="2" placeholder="Кратко опишите проблему или задачу"></textarea>
+        </div>
+      </div>
+      <div class="mt-3">
+        <button id="create-submit-btn" class="btn btn-primary" type="submit">
+          <i class="ti ti-plus me-1"></i>Создать заявку
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Список заявок с поиском и фильтром по статусу -->
+<div class="card">
+  <div class="card-header">
+    <h3 class="card-title">Список заявок</h3>
+  </div>
+  <div class="card-body border-bottom py-3">
+    <div class="row g-2 align-items-center">
+      <div class="col-md-8">
+        <div class="input-icon">
+          <span class="input-icon-addon">
+            <i class="ti ti-search"></i>
+          </span>
+          <input id="search-input" type="text" class="form-control" placeholder="Поиск заявок по названию или описанию...">
+        </div>
+      </div>
+      <div class="col-md-4">
+        <select id="status-filter" class="form-select">
+          <option value="">Все статусы</option>
+          <option value="new">Новые</option>
+          <option value="progress">В работе</option>
+          <option value="done">Выполненные</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div id="loading" class="p-4 text-center text-secondary" hidden>
+    <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+    Загрузка данных...
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-vcenter card-table">
+      <thead>
+        <tr>
+          <th style="width: 70px;">ID</th>
+          <th>Заявка</th>
+          <th>Категория</th>
+          <th>Статус</th>
+          <th class="text-end" style="width: 220px;">Действия</th>
+        </tr>
+      </thead>
+      <tbody id="tickets-list"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Модальное окно редактирования и смены статуса -->
+<div class="modal modal-blur fade" id="edit-ticket-modal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <form id="edit-ticket-form" novalidate>
+        <div class="modal-header">
+          <h5 class="modal-title">Редактирование заявки #<span id="edit-ticket-id-label"></span></h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="edit-ticket-id">
+          <div class="mb-3">
+            <label class="form-label required" for="edit-title">Название</label>
+            <input type="text" id="edit-title" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label required" for="edit-category">Категория</label>
+            <select id="edit-category" class="form-select" required></select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="edit-description">Описание</label>
+            <textarea id="edit-description" class="form-control" rows="2"></textarea>
+          </div>
+          <div class="mb-2">
+            <label class="form-label required" for="edit-status">Статус</label>
+            <select id="edit-status" class="form-select" required></select>
+            <div class="form-hint">Допустим только последовательный переход: Новая → В работе → Выполнена.</div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn me-auto" data-bs-dismiss="modal">Отмена</button>
+          <button type="submit" class="btn btn-primary" id="save-edit-btn">Сохранить изменения</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Модальное окно подтверждения удаления -->
+<div class="modal modal-blur fade" id="delete-ticket-modal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-sm modal-dialog-centered">
+    <div class="modal-content">
+      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+      <div class="modal-status bg-danger"></div>
+      <div class="modal-body text-center py-4">
+        <i class="ti ti-alert-triangle icon mb-2 text-danger icon-lg"></i>
+        <h3>Удалить заявку?</h3>
+        <div class="text-secondary">
+          Вы действительно хотите удалить заявку «<span id="delete-ticket-title"></span>»? Это действие нельзя отменить.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <div class="w-100">
+          <div class="row">
+            <div class="col">
+              <button type="button" class="btn w-100" data-bs-dismiss="modal">Отмена</button>
+            </div>
+            <div class="col">
+              <button type="button" class="btn btn-danger w-100" id="confirm-delete-btn">Удалить</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'tickets/app.js' %}"></script>
+{% endblock %}
